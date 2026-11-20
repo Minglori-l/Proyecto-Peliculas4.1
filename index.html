@@ -8,21 +8,28 @@
 </head>
 <body>
 
-    
+    <!-- Usamos <header> para el título principal y el formulario de búsqueda -->
     <header>
-        <h1>Catalogo de Películas</h1>
+        <h1>Catálogo de Películas</h1>
         <form id="search-form">
             <input type="text" id="search-input" placeholder="Buscar películas..." autocomplete="off">
         </form>
     </header>
 
-   
+    <!-- Usamos <main> para el contenido principal de la aplicación -->
     <main>
-      
+        <!-- Usamos <section> para agrupar la cuadrícula de tarjetas de películas -->
         <section id="movies-container" class="movies-grid"></section>
+
+        <!-- Controles de paginación requeridos por app.js -->
+        <div class="pagination">
+            <button id="prev-btn" disabled>← Anterior</button>
+            <span id="page-info">Página 1</span>
+            <button id="next-btn">Siguiente →</button>
+        </div>
     </main>
     
-
+    <!-- Cargamos app.js al final -->
     <script src="app.js"></script>
 </body>
 </html>
