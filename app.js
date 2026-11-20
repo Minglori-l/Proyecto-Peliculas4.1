@@ -46,5 +46,54 @@ async function obtenerPeliculasPopulares() {
     }
 }
 
+// ==========================================
+// LÓGICA DEL BUSCADOR CON DEBOUNCE
+// ==========================================
+
+// 1. Atrapamos el input de búsqueda del HTML
+const inputBuscador = document.getElementById('search-input');
+
+// 2. Creamos la función Debounce pura en JavaScript
+function debounce(funcionPrincipal, tiempoEspera) {
+    let temporizador;
+    return function(...argumentos) {
+        // Si el usuario sigue escribiendo, borramos el temporizador anterior
+        clearTimeout(temporizador);
+        // Creamos un nuevo temporizador
+        temporizador = setTimeout(() => {
+            funcionPrincipal.apply(this, argumentos);
+        }, tiempoEspera);
+    };
+}
+
+// 3. Función para buscar en la API de TMDB
+async function buscarPeliculas(terminoBusqueda) {
+    // Si el usuario borra todo y deja el buscador vacío, volvemos a mostrar las populares
+    if (terminoBusqueda.trim() === '') {
+        obtenerPeliculasPopulares();
+        return;
+    }
+
+    try {
+        // Fíjate que la URL cambia, ahora usamos "/search/movie" y le pasamos el "query"
+        const respuesta = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&language=es-MX&query=${terminoBusqueda}`);
+        const datos = await respuesta.json();
+        
+        // Reutilizamos nuestra función que pinta las películas, pero ahora con los resultados de la búsqueda
+        mostrarPeliculas(datos.results);
+        
+    } catch (error) {
+        console.error("Error al buscar las películas:", error);
+    }
+}
+
+// 4. Unimos todo: Le decimos al input que use el Debounce con medio segundo de espera (500ms)
+const realizarBusqueda = debounce((evento) => {
+    buscarPeliculas(evento.target.value);
+}, 500);
+
+// 5. Escuchamos cada vez que el usuario escribe algo en el input
+inputBuscador.addEventListener('input', realizarBusqueda);
+
 // Llamamos a la función al iniciar
 obtenerPeliculasPopulares();
