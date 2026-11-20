@@ -1,99 +1,106 @@
-const API_KEY = '71d958f8c6e596bda98074635b045557'; // clave real de nuestra APIs
+const API_KEY = '71d958f8c6e596bda98074635b045557';
 const BASE_URL = 'https://api.themoviedb.org/3';
-// 1. NUEVO: TMDB no envía la URL completa de la imagen, solo la parte final.
-const IMG_BASE_URL = 'https://image.tmdb.org/t/p/w500'; 
+const IMG_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-// 2. la etiqueta <section> de nuestro HTML donde irán las películas
+// Referencias a los elementos del DOM
 const contenedorPeliculas = document.getElementById('movies-container');
+const inputBuscador = document.getElementById('search-input');
+const formularioBuscador = document.getElementById('search-form');
 
-// 3.  Función que recibe la lista de películas y las mete en el HTML
+
+// 2. RENDERIZADO DE PELÍCULAS EN EL DOM
+
 function mostrarPeliculas(peliculas) {
     
     contenedorPeliculas.innerHTML = '';
 
-    // Recorremos cada película de la lista
-    peliculas.forEach(pelicula => {
-        // Creamos la etiqueta <article> que nos pide la rúbrica (HTML5 semántico)
-        const article = document.createElement('article');
-        article.classList.add('movie-card'); // Le damos una clase para ponerle CSS luego
 
-        // Rellenamos el artículo con la imagen, el título y la calificación
-        // Usamos las comillas invertidas (backticks ` `) para poder inyectar las variables
+    if (!peliculas || peliculas.length === 0) {
+        contenedorPeliculas.innerHTML = '<p class="no-results">No se encontraron películas que coincidan con tu búsqueda.</p>';
+        return;
+    }
+
+    peliculas.forEach(pelicula => {
+        
+        const article = document.createElement('article');
+        article.classList.add('movie-card');
+
+        
+        article.addEventListener('click', () => {
+            window.location.href = `movie.html?id=${pelicula.id}`;
+        });
+
+    
+        const rutaImagen = pelicula.poster_path 
+            ? `${IMG_BASE_URL}${pelicula.poster_path}` 
+            : 'https://via.placeholder.com/500x750?text=Sin+Poster';
+
         article.innerHTML = `
-            <img src="${IMG_BASE_URL}${pelicula.poster_path}" alt="Póster de ${pelicula.title}">
+            <img src="${rutaImagen}" alt="Póster de ${pelicula.title}" loading="lazy">
             <div class="movie-info">
                 <h2>${pelicula.title}</h2>
-                <p>⭐ ${pelicula.vote_average.toFixed(1)}</p>
+                <p>⭐ ${pelicula.vote_average ? pelicula.vote_average.toFixed(1) : 'N/A'}</p>
             </div>
         `;
 
-        // Agregamos este nuevo artículo al contenedor principal del HTML
         contenedorPeliculas.appendChild(article);
+
+       
     });
 }
 
-// 4. ACTUALIZADO: Modificamos nuestra función original
+
 async function obtenerPeliculasPopulares() {
     try {
         const respuesta = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=es-MX`);
+        if (!respuesta.ok) throw new Error('Error en la respuesta de la red');
+        
         const datos = await respuesta.json();
-        
-        // En lugar de hacer console.log, ahora le pasamos los datos a nuestra nueva función
         mostrarPeliculas(datos.results);
-        
     } catch (error) {
-        console.error("Hubo un error al conectar con la API:", error);
+        console.error("Hubo un error al obtener las películas populares:", error);
+        contenedorPeliculas.innerHTML = '<p class="error-msg">Error al cargar las películas. Intenta recargar la página.</p>';
     }
 }
 
-// ==========================================
-// LÓGICA DEL BUSCADOR CON DEBOUNCE
-// ==========================================
-
-// 1. Atrapamos el input de búsqueda del HTML
-const inputBuscador = document.getElementById('search-input');
-
-// 2. Creamos la función Debounce pura en JavaScript
-function debounce(funcionPrincipal, tiempoEspera) {
-    let temporizador;
-    return function(...argumentos) {
-        // Si el usuario sigue escribiendo, borramos el temporizador anterior
-        clearTimeout(temporizador);
-        // Creamos un nuevo temporizador
-        temporizador = setTimeout(() => {
-            funcionPrincipal.apply(this, argumentos);
-        }, tiempoEspera);
-    };
-}
-
-// 3. Función para buscar en la API de TMDB
 async function buscarPeliculas(terminoBusqueda) {
-    // Si el usuario borra todo y deja el buscador vacío, volvemos a mostrar las populares
     if (terminoBusqueda.trim() === '') {
         obtenerPeliculasPopulares();
         return;
     }
 
     try {
-        // Fíjate que la URL cambia, ahora usamos "/search/movie" y le pasamos el "query"
-        const respuesta = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&language=es-MX&query=${terminoBusqueda}`);
+    
+        const queryCodificada = encodeURIComponent(terminoBusqueda);
+        const respuesta = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&language=es-MX&query=${queryCodificada}`);
+        if (!respuesta.ok) throw new Error('Error en la búsqueda');
+
         const datos = await respuesta.json();
-        
-        // Reutilizamos nuestra función que pinta las películas, pero ahora con los resultados de la búsqueda
         mostrarPeliculas(datos.results);
-        
     } catch (error) {
         console.error("Error al buscar las películas:", error);
     }
 }
 
-// 4. Unimos todo: Le decimos al input que use el Debounce con medio segundo de espera (500ms)
+function debounce(funcionPrincipal, tiempoEspera) {
+    let temporizador;
+    return function(...argumentos) {
+        clearTimeout(temporizador);
+        temporizador = setTimeout(() => {
+            funcionPrincipal.apply(this, argumentos);
+        }, tiempoEspera);
+    };
+}
+
 const realizarBusqueda = debounce((evento) => {
     buscarPeliculas(evento.target.value);
 }, 500);
 
-// 5. Escuchamos cada vez que el usuario escribe algo en el input
-inputBuscador.addEventListener('input', realizarBusqueda);
 
-// Llamamos a la función al iniciar
+inputBuscador.addEventListener('input', realizarBusqueda);
+formularioBuscador.addEventListener('submit', (evento) => {
+    evento.preventDefault();
+});
+
+
 obtenerPeliculasPopulares();
